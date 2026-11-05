@@ -33,7 +33,9 @@ export const setupSocketServer = (httpServer: HttpServer, clientUrl: string) => 
     httpServer,
     {
       cors: {
-        origin: [clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+        origin: (origin, callback) => {
+          callback(null, true);
+        },
         credentials: true,
         methods: ['GET', 'POST'],
       },
