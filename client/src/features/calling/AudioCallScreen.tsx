@@ -21,11 +21,18 @@ export const AudioCallScreen: React.FC = () => {
   } = useCallStore();
 
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (remoteAudioRef.current && remoteStream) {
-      remoteAudioRef.current.srcObject = remoteStream;
-      remoteAudioRef.current.play().catch(() => {});
+    if (remoteStream) {
+      if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== remoteStream) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(() => {});
+      }
+      if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
+      }
     }
   }, [remoteStream]);
 
@@ -37,8 +44,9 @@ export const AudioCallScreen: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-40 bg-[#080808] flex flex-col justify-between p-6 select-none safe-top safe-bottom">
-      {/* Hidden audio element to play remote peer audio */}
+      {/* Hidden audio & video elements for WebRTC audio playback across iOS Safari and Android Chrome */}
       <audio ref={remoteAudioRef} autoPlay playsInline />
+      <video ref={remoteVideoRef} autoPlay playsInline className="fixed -top-full -left-full w-1 h-1 opacity-0 pointer-events-none" />
 
       {/* Top Header */}
       <div className="flex items-center justify-between">

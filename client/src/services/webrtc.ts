@@ -15,6 +15,7 @@ export class WebRtcManager {
   private queuedCandidates: RTCIceCandidateInit[] = [];
   private isRemoteDescriptionSet = false;
   private currentFacingMode: 'user' | 'environment' = 'user';
+  private callType: 'video' | 'audio' = 'video';
 
   constructor(callbacks: WebRtcCallbacks, iceServers: RTCIceServer[] = []) {
     this.callbacks = callbacks;
@@ -27,6 +28,7 @@ export class WebRtcManager {
 
   // 1. Get Local Media Stream
   async getLocalMedia(callType: 'video' | 'audio', facingMode: 'user' | 'environment' = 'user'): Promise<MediaStream> {
+    this.callType = callType;
     this.currentFacingMode = facingMode;
 
     const constraints: MediaStreamConstraints = {
@@ -134,7 +136,7 @@ export class WebRtcManager {
     if (!this.pc) this.initPeerConnection();
     const offer = await this.pc!.createOffer({
       offerToReceiveAudio: true,
-      offerToReceiveVideo: true,
+      offerToReceiveVideo: this.callType === 'video',
     });
     await this.pc!.setLocalDescription(offer);
     return offer;
