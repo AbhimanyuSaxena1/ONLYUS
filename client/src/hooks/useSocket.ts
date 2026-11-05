@@ -27,6 +27,10 @@ export const useSocket = () => {
     };
 
     // Calling events
+    const handleCallRinging = (data: { callId: string }) => {
+      useCallStore.setState({ activeCallId: data.callId, callStatus: 'ringing' });
+    };
+
     const handleCallIncoming = (data: {
       callId: string;
       caller: any;
@@ -37,11 +41,15 @@ export const useSocket = () => {
 
     const handleCallAccepted = async (data: { callId: string }) => {
       console.log('[useSocket] call:accepted received for call:', data.callId);
-      const rtcManager = useCallStore.getState().webrtcManager;
-      if (rtcManager) {
-        useCallStore.setState({ activeCallId: data.callId, callStatus: 'connecting' });
+      const { webrtcManager, isInitiator } = useCallStore.getState();
+      useCallStore.setState({ activeCallId: data.callId, callStatus: 'connecting' });
+
+      // CRITICAL: ONLY the call initiator creates the offer.
+      // The receiver waits for the offer and creates the answer!
+      if (webrtcManager && isInitiator) {
         try {
-          const offer = await rtcManager.createOffer();
+          console.log('[useSocket] Call initiator creating and sending offer...');
+          const offer = await webrtcManager.createOffer();
           socket.emit('call:offer', { callId: data.callId, sdp: offer });
         } catch (err) {
           console.error('Failed to create offer:', err);
@@ -124,6 +132,7 @@ export const useSocket = () => {
     socket.on('user:online', handleUserOnline);
     socket.on('user:offline', handleUserOffline);
 
+    socket.on('call:ringing', handleCallRinging);
     socket.on('call:incoming', handleCallIncoming);
     socket.on('call:accepted', handleCallAccepted);
     socket.on('call:offer', handleCallOffer);
@@ -143,6 +152,7 @@ export const useSocket = () => {
     return () => {
       socket.off('user:online', handleUserOnline);
       socket.off('user:offline', handleUserOffline);
+      socket.off('call:ringing', handleCallRinging);
       socket.off('call:incoming', handleCallIncoming);
       socket.off('call:accepted', handleCallAccepted);
       socket.off('call:offer', handleCallOffer);

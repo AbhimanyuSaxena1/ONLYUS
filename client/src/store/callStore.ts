@@ -22,6 +22,7 @@ interface CallState {
   connectionQuality: 'good' | 'poor' | 'disconnected';
   webrtcManager: WebRtcManager | null;
   timerInterval: any;
+  isInitiator: boolean;
 
   // Actions
   initiateCall: (receiver: User, callType: CallType) => Promise<void>;
@@ -55,6 +56,7 @@ export const useCallStore = create<CallState>((set, get) => ({
   connectionQuality: 'good',
   webrtcManager: null,
   timerInterval: null,
+  isInitiator: false,
 
   initiateCall: async (receiver: User, callType: CallType) => {
     const socket = getSocket();
@@ -72,6 +74,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       isCameraOff: false,
       isRemoteMuted: false,
       isRemoteCameraOff: false,
+      isInitiator: true,
     });
 
     soundEffects.startOutgoingCallingTone();
@@ -150,6 +153,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       isCameraOff: false,
       isRemoteMuted: false,
       isRemoteCameraOff: false,
+      isInitiator: false,
     });
   },
 
@@ -315,6 +319,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       webrtcManager: null,
       timerInterval: null,
       duration: 0,
+      isInitiator: false,
     });
   },
 }));

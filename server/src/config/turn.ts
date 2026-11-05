@@ -26,6 +26,23 @@ export const getIceServers = (): IceServerConfig[] => {
       username: ENV.TURN_USERNAME,
       credential: ENV.TURN_CREDENTIAL,
     });
+  } else {
+    // Default fallback to free OpenRelay TURN servers so mobile cellular/NAT calls always connect!
+    iceServers.push(
+      {
+        urls: [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+        ],
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+      {
+        urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      }
+    );
   }
 
   return iceServers;

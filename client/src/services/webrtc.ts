@@ -80,10 +80,15 @@ export class WebRtcManager {
     this.pc.ontrack = (event) => {
       console.log('[WebRTC] Received remote track:', event.track.kind);
       if (event.streams && event.streams[0]) {
-        this.callbacks.onRemoteStream(event.streams[0]);
+        this.remoteStream = event.streams[0];
       } else if (this.remoteStream) {
         this.remoteStream.addTrack(event.track);
-        this.callbacks.onRemoteStream(this.remoteStream);
+      }
+
+      if (this.remoteStream) {
+        // Create new MediaStream reference so React state and video srcObject update immediately
+        const streamClone = new MediaStream(this.remoteStream.getTracks());
+        this.callbacks.onRemoteStream(streamClone);
       }
     };
 
@@ -129,6 +134,13 @@ export class WebRtcManager {
   // 4. Handle Offer and Create Answer
   async handleOffer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
     if (!this.pc) this.initPeerConnection();
+
+    if (this.pc!.signalingState !== 'stable') {
+      try {
+        await this.pc!.setLocalDescription({ type: 'rollback' });
+      } catch (e) {}
+    }
+
     await this.pc!.setRemoteDescription(new RTCSessionDescription(offer));
     this.isRemoteDescriptionSet = true;
     await this.processQueuedCandidates();
@@ -141,16 +153,19 @@ export class WebRtcManager {
   // 5. Handle Answer
   async handleAnswer(answer: RTCSessionDescriptionInit): Promise<void> {
     if (!this.pc) return;
-    await this.pc.setRemoteDescription(new RTCSessionDescription(answer));
-    this.isRemoteDescriptionSet = true;
-    await this.processQueuedCandidates();
+
+    if (this.pc.signalingState === 'have-local-offer') {
+      await this.pc.setRemoteDescription(new RTCSessionDescription(answer));
+      this.isRemoteDescriptionSet = true;
+      await this.processQueuedCandidates();
+    }
   }
 
   // 6. Handle Incoming ICE Candidate
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
     if (!this.pc) return;
 
-    if (!this.isRemoteDescriptionSet) {
+    if (!this.isRemoteDescriptionSet || !this.pc.remoteDescription) {
       this.queuedCandidates.push(candidate);
       return;
     }

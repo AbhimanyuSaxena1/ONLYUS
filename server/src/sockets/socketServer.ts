@@ -145,6 +145,9 @@ export const setupSocketServer = (httpServer: HttpServer, clientUrl: string) => 
           status: 'ringing',
         });
 
+        // Notify caller that call has initiated and give them the callId
+        socket.emit('call:ringing', { callId });
+
         const callerUser = await User.findById(userId);
 
         // Notify receiver via Socket if online
@@ -278,72 +281,64 @@ export const setupSocketServer = (httpServer: HttpServer, clientUrl: string) => 
       }
     });
 
+    // Helper to resolve the peer target in OnlyUs
+    const resolveTargetUserId = async (callId: string, currentUserId: string): Promise<string | null> => {
+      const activeCall = activeCalls.get(callId);
+      if (activeCall) {
+        return activeCall.callerId === currentUserId ? activeCall.receiverId : activeCall.callerId;
+      }
+      try {
+        const callDoc = await Call.findById(callId);
+        if (callDoc) {
+          return callDoc.caller.toString() === currentUserId ? callDoc.receiver.toString() : callDoc.caller.toString();
+        }
+      } catch (e) {}
+      const partner = await User.findOne({ _id: { $ne: currentUserId } });
+      return partner ? partner._id.toString() : null;
+    };
+
     // ---------------------------------------------------------------------
     // WEBRTC SIGNALING (OFFER, ANSWER, ICE CANDIDATES)
     // ---------------------------------------------------------------------
-    socket.on('call:offer', ({ callId, sdp }) => {
-      const activeCall = activeCalls.get(callId);
-      const targetUserId = activeCall
-        ? (activeCall.callerId === userId ? activeCall.receiverId : activeCall.callerId)
-        : null;
-
+    socket.on('call:offer', async ({ callId, sdp }) => {
+      const targetUserId = await resolveTargetUserId(callId, userId);
       if (targetUserId) {
         logger.info(`Relaying SDP offer for call ${callId} to ${targetUserId}`);
         io.to(`user:${targetUserId}`).emit('call:offer', { callId, sdp });
       }
     });
 
-    socket.on('call:answer', ({ callId, sdp }) => {
-      const activeCall = activeCalls.get(callId);
-      const targetUserId = activeCall
-        ? (activeCall.callerId === userId ? activeCall.receiverId : activeCall.callerId)
-        : null;
-
+    socket.on('call:answer', async ({ callId, sdp }) => {
+      const targetUserId = await resolveTargetUserId(callId, userId);
       if (targetUserId) {
         logger.info(`Relaying SDP answer for call ${callId} to ${targetUserId}`);
         io.to(`user:${targetUserId}`).emit('call:answer', { callId, sdp });
       }
     });
 
-    socket.on('call:ice-candidate', ({ callId, candidate }) => {
-      const activeCall = activeCalls.get(callId);
-      const targetUserId = activeCall
-        ? (activeCall.callerId === userId ? activeCall.receiverId : activeCall.callerId)
-        : null;
-
+    socket.on('call:ice-candidate', async ({ callId, candidate }) => {
+      const targetUserId = await resolveTargetUserId(callId, userId);
       if (targetUserId) {
         io.to(`user:${targetUserId}`).emit('call:ice-candidate', { callId, candidate });
       }
     });
 
-    socket.on('call:mute', ({ callId, isMuted }) => {
-      const activeCall = activeCalls.get(callId);
-      const targetUserId = activeCall
-        ? (activeCall.callerId === userId ? activeCall.receiverId : activeCall.callerId)
-        : null;
-
+    socket.on('call:mute', async ({ callId, isMuted }) => {
+      const targetUserId = await resolveTargetUserId(callId, userId);
       if (targetUserId) {
         io.to(`user:${targetUserId}`).emit('call:mute', { callId, isMuted });
       }
     });
 
-    socket.on('call:camera', ({ callId, isCameraOff }) => {
-      const activeCall = activeCalls.get(callId);
-      const targetUserId = activeCall
-        ? (activeCall.callerId === userId ? activeCall.receiverId : activeCall.callerId)
-        : null;
-
+    socket.on('call:camera', async ({ callId, isCameraOff }) => {
+      const targetUserId = await resolveTargetUserId(callId, userId);
       if (targetUserId) {
         io.to(`user:${targetUserId}`).emit('call:camera', { callId, isCameraOff });
       }
     });
 
-    socket.on('call:reconnect', ({ callId }) => {
-      const activeCall = activeCalls.get(callId);
-      const targetUserId = activeCall
-        ? (activeCall.callerId === userId ? activeCall.receiverId : activeCall.callerId)
-        : null;
-
+    socket.on('call:reconnect', async ({ callId }) => {
+      const targetUserId = await resolveTargetUserId(callId, userId);
       if (targetUserId) {
         io.to(`user:${targetUserId}`).emit('call:reconnected', { callId });
       }

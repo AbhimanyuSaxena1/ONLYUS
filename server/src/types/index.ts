@@ -126,6 +126,7 @@ export interface ServerToClientEvents {
   'user:status': (data: { userId: string; status: string }) => void;
   'user:lastSeen': (data: { userId: string; lastSeen: Date }) => void;
 
+  'call:ringing': (data: { callId: string }) => void;
   'call:incoming': (data: {
     callId: string;
     caller: { id: string; name: string; profilePicture: string };
