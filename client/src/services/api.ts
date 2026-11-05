@@ -2,6 +2,23 @@ import axios, { InternalAxiosRequestConfig } from 'axios';
 
 export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
+export const getFullMediaUrl = (url?: string): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const envServer = import.meta.env.VITE_SERVER_URL;
+  if (envServer) {
+    return `${envServer.replace(/\/+$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+  const envApi = import.meta.env.VITE_API_URL;
+  if (envApi && envApi.startsWith('http')) {
+    const base = envApi.replace(/\/api\/?$/, '');
+    return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+  return url;
+};
+
 export const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,

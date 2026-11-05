@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "OnlyUs - Complete Private Video Calling, Audio Calling & Chat Application",
   "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "build:server": "npm --prefix server run build",
