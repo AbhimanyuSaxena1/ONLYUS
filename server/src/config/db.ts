@@ -26,20 +26,24 @@ export const connectDatabase = async (): Promise<void> => {
     if (ENV.NODE_ENV !== 'production') {
       try {
         logger.info('Attempting fallback to in-memory MongoDB server for development...');
-        const { MongoMemoryServer } = await import('mongodb-memory-server');
-        const mongod = await MongoMemoryServer.create();
-        const memoryUri = mongod.getUri();
+        const memoryServerPkg = 'mongodb-memory-server';
+        // @ts-ignore
+        const memModule: any = await import(memoryServerPkg).catch(() => null);
+        if (memModule && memModule.MongoMemoryServer) {
+          const mongod = await memModule.MongoMemoryServer.create();
+          const memoryUri = mongod.getUri();
 
-        await mongoose.connect(memoryUri);
-        isConnected = true;
-        logger.info(`Connected to in-memory MongoDB at: ${memoryUri}`);
+          await mongoose.connect(memoryUri);
+          isConnected = true;
+          logger.info(`Connected to in-memory MongoDB at: ${memoryUri}`);
 
-        process.on('SIGINT', async () => {
-          await mongoose.disconnect();
-          await mongod.stop();
-          process.exit(0);
-        });
-        return;
+          process.on('SIGINT', async () => {
+            await mongoose.disconnect();
+            await mongod.stop();
+            process.exit(0);
+          });
+          return;
+        }
       } catch (memError: any) {
         logger.warn(`In-memory MongoDB not started (${memError.message}).`);
       }
