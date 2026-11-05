@@ -1,0 +1,26 @@
+{
+  "name": "onlyus",
+  "version": "1.0.0",
+  "description": "OnlyUs - Complete Private Video Calling, Audio Calling & Chat Application",
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "start:server": "npm --prefix server run start",
+    "start": "npm run start:server"
+  },
+  "keywords": [
+    "webrtc",
+    "video-calling",
+    "audio-calling",
+    "realtime-chat",
+    "socketio",
+    "pwa",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "OnlyUs",
+  "license": "MIT"
+}
