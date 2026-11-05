@@ -94,8 +94,17 @@ export class WebRtcManager {
 
     // Handle ICE candidates
     this.pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        this.callbacks.onIceCandidate(event.candidate);
+      if (event.candidate && event.candidate.candidate) {
+        // Ensure pure JSON serialization for Socket.IO transmission
+        const jsonCandidate = event.candidate.toJSON
+          ? event.candidate.toJSON()
+          : {
+              candidate: event.candidate.candidate,
+              sdpMid: event.candidate.sdpMid,
+              sdpMLineIndex: event.candidate.sdpMLineIndex,
+              usernameFragment: event.candidate.usernameFragment,
+            };
+        this.callbacks.onIceCandidate(jsonCandidate as any);
       }
     };
 
@@ -163,7 +172,7 @@ export class WebRtcManager {
 
   // 6. Handle Incoming ICE Candidate
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
-    if (!this.pc) return;
+    if (!this.pc || !candidate || !candidate.candidate) return;
 
     if (!this.isRemoteDescriptionSet || !this.pc.remoteDescription) {
       this.queuedCandidates.push(candidate);
@@ -178,10 +187,10 @@ export class WebRtcManager {
   }
 
   private async processQueuedCandidates(): Promise<void> {
-    if (!this.pc) return;
+    if (!this.pc || !this.pc.remoteDescription) return;
     while (this.queuedCandidates.length > 0) {
       const candidate = this.queuedCandidates.shift();
-      if (candidate) {
+      if (candidate && candidate.candidate) {
         try {
           await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (err) {

@@ -30,6 +30,7 @@ export const VideoCallScreen: React.FC = () => {
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const [pipPosition, setPipPosition] = useState<'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'>('top-right');
 
   // Attach local stream to local video element
@@ -40,11 +41,17 @@ export const VideoCallScreen: React.FC = () => {
     }
   }, [localStream, isCameraOff]);
 
-  // Attach remote stream to remote video element
+  // Attach remote stream to remote video and audio elements
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(() => {});
+    if (remoteStream) {
+      if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch((e) => console.log('Remote video autoplay:', e));
+      }
+      if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== remoteStream) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch((e) => console.log('Remote audio autoplay:', e));
+      }
     }
   }, [remoteStream, isRemoteCameraOff]);
 
@@ -80,16 +87,19 @@ export const VideoCallScreen: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-40 bg-[#080808] flex flex-col justify-between overflow-hidden select-none">
-      {/* 1. Remote Video Background */}
+      {/* Dedicated audio element ensures unblocked remote audio playback on all mobile browsers */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+
+      {/* 1. Remote Video Background (always mounted to preserve ref and hardware decoder) */}
       <div className="relative w-full h-full flex items-center justify-center bg-black">
-        {remoteStream && !isRemoteCameraOff ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        ) : (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className={`w-full h-full object-cover ${(!remoteStream || isRemoteCameraOff) ? 'hidden' : 'block'}`}
+        />
+
+        {(!remoteStream || isRemoteCameraOff) && (
           <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
             <Avatar
               src={remoteUser?.profilePicture}
@@ -101,7 +111,7 @@ export const VideoCallScreen: React.FC = () => {
               <p className="text-sm text-[#A1A1AA] mt-1">
                 {callStatus === 'initiating' && 'Calling...'}
                 {callStatus === 'ringing' && 'Ringing...'}
-                {callStatus === 'connecting' && 'Connecting...'}
+                {callStatus === 'connecting' && 'Connecting video...'}
                 {callStatus === 'connected' && isRemoteCameraOff && 'Partner camera is off'}
               </p>
             </div>
