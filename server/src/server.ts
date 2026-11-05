@@ -69,6 +69,20 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
+// Root backend status
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    service: 'OnlyUs Backend Server',
+    status: 'online',
+    version: '1.0.0',
+    description: 'Private Video Calling, Audio Calling & Chat API',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth/status',
+    },
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
